@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package grpc;
+
+option go_package ="github.com/Cristian-Jara/SDLab2.git/proto";
+
+message JoinRequest {
+    string request = 1; // Para solicitud
+}
+
+message JoinReply {
+    string reply = 1; // Para respuesta
+    string player = 2; // Para el número del jugador
+}
+message GameStarted {
+    string body = 1; // Aviso de inicio de la etapa
+    string type = 2;
+}
+
+message Play {
+    int32 plays = 1; // Jugada realizada
+    string player = 2; // Número del jugador
+}
+
+message Result {
+    string RoundResult = 1; // Vivo o muerto
+    string StageStatus = 2; // Si termina la etapa o no
+}
+
+message MoneyAmount {
+    string money = 1;
+}
+
+
+service ChatService {
+    rpc JoinToGame(JoinRequest) returns (JoinReply); // Para unirse al juego
+    rpc StageOrRoundStarted(GameStarted) returns (GameStarted); //Para preguntar si inicia la etapa o la ronda siguiente
+    rpc PlayTheGame(Play) returns (Result); // Para las jugadas y resultados
+    rpc GetMoneyAmount(MoneyAmount) returns (MoneyAmount); //Para solicitar la cantidad de dinero
+}
