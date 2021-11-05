@@ -4,6 +4,7 @@ import (
 	"log"
 	"fmt"
 	"context"
+	"time"
 	"google.golang.org/grpc"
 	pb "github.com/Cristian-Jara/SDLab2.git/proto"
 )
@@ -22,7 +23,9 @@ var (
 	ActualRound int32
 	Jugada int32
 	Score = 0
+	input string
 )
+
 
 func main(){
 	conn,err := grpc.Dial(fmt.Sprint(LocalIP,Puerto),grpc.WithInsecure())
@@ -43,6 +46,22 @@ func main(){
 	if response.Player != "-1"{
 		Player = response.Player
 		for Status == "Alive" {
+			for {
+				log.Printf("Presiona 1 para jugar y 2 para ver el monto acumulado actual")
+				fmt.Scanln(&input)
+				if input == "1" {
+					break
+				}else if input == "2"{
+					response,err := serviceClient.GetMoneyAmount(context.Background(), &pb.MoneyAmount{Money:""})
+					if err != nil{
+						log.Fatalf("Error when calling GetMoneyAmount: %v",err)
+					}
+					log.Printf("El monto acumulado es de: "+ response.Money)
+				}else{
+					log.Printf("Valor erróneo, ingresa nuevamente")
+				}
+			}
+			log.Printf("Esperando a los demás jugadores ... ")
 			for Playing != true {
 				message := pb.GameStarted{Body:"", Type:""}
 				response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
@@ -54,24 +73,57 @@ func main(){
 					ActualStage = response.Type
 				} 
 			}
+			Playing = false
+			time.Sleep(1*time.Second)
 			if ActualStage == "1" {
-				log.Printf("Escoge un numero del 1 al 10")
-				fmt.Scanln(&Jugada)
-				for Jugada<1 || Jugada >10 {
-					log.Printf("Escoge un numero válido")
+				ActualRound = 1
+				for ActualRound<5 && Score <21{
+					log.Printf("Esperando inicie la ronda ....")
+					for Playing != true {
+						message := pb.GameStarted{Body:"", Type:""}
+						response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
+						if err != nil{
+							log.Fatalf("Error when calling SendMessage: %s", err)
+						}
+						if response.Body == "Si"{
+							Playing = true
+						} 
+					}
+					log.Printf("Escoge un numero del 1 al 10")
 					fmt.Scanln(&Jugada)
+					Score += int(Jugada)
+					for Jugada<1 || Jugada >10 {
+						log.Printf("Escoge un numero válido")
+						fmt.Scanln(&Jugada)
+					}
+					message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
+					response,err := serviceClient.SendPlays(context.Background(),&message)
+					if err != nil{
+						log.Fatalf("Error when calling SendMessage: %s", err)
+					}
+					if response.Alive == false{
+						log.Printf("Haz muerto")
+						Status = "Dead"
+						break
+					}
+					log.Printf("Sobreviviste la ronda")
+					ActualRound+=1
+					Playing = false
+					time.Sleep(1*time.Second)
 				}
-				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
-				response,err := serviceClient.SendPlays(context.Background(),&message)
-				if err != nil{
-					log.Fatalf("Error when calling SendMessage: %s", err)
+				if Status == "Alive" && Score >=21 {
+					log.Printf("Felicidades, sobreviviste el nivel 1")
 				}
-				if response.Alive == false{
-					log.Printf("Haz muerto")
+				if Score < 21 {
+					log.Printf("Mala suerte, no alcanzaste los puntos necesarios, has muerto")
 					Status = "Dead"
 					break
 				}
-				log.Printf("Sobreviviste la ronda")
+			} else if ActualStage == "2" {
+				ActualRound = 1
+				log.Printf("Etapa 2")
+			} else if ActualStage == "3" {
+				log.Printf("Etapa 3")
 			}
 		}
 	}

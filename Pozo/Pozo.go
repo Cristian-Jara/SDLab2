@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"log"
@@ -20,7 +19,7 @@ type server struct {
 func (s *server) AmountCheck(ctx context.Context, in *pb.MoneyAmount) (*pb.MoneyAmount, error) {
 	return &pb.MoneyAmount{Money: strconv.Itoa(DineroAcum)}, nil
 }
-func ErrorMessage(err error, msg string) {
+func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 	}
@@ -31,7 +30,7 @@ var DineroAcum int = 0
 const (
 	LiderIP = "10.6.40.227"
 	LocalIP = "localhost"
-	Puerto = ":50069"
+	Puerto = ":5672"
 )
 
 func main() {
@@ -51,12 +50,12 @@ func main() {
 		}
 	}()
 
-	conn, err := amqp.Dial(fmt.Sprint("amqp://admin:test@",LocalIP,Puerto,"/"))
-	ErrorMessage(err, "Failed to connect to RabbitMQ")
+	conn, err := amqp.Dial("amqp://admin:test@"+LiderIP+Puerto+"/")
+	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	ErrorMessage(err, "Failed to open a channel")
+	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
@@ -67,7 +66,7 @@ func main() {
 		false,   // no-wait
 		nil,     // arguments
 	)
-	ErrorMessage(err, "Failed to declare a queue")
+	failOnError(err, "Failed to declare a queue")
 
 	msgs, err := ch.Consume(
 		q.Name, // queue
@@ -78,7 +77,7 @@ func main() {
 		false,  // no-wait
 		nil,    // args
 	)
-	ErrorMessage(err, "Failed to register a consumer")
+	failOnError(err, "Failed to register a consumer")
 	forever := make(chan bool)
 	path := "Pozo/registro_muertes.txt"
 	_, err = os.Stat(path)
@@ -98,9 +97,8 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
-			cadena := string(d.Body)
 			DineroAcum = DineroAcum + 100000000
-			b = append(b, []byte(cadena+" "+strconv.Itoa(DineroAcum)+" \n")...)
+			b = append(b, []byte(string(d.Body)+" "+strconv.Itoa(DineroAcum)+" \n")...)
 			err = ioutil.WriteFile(path, b, 0644)
 			if err != nil {
 				log.Fatal(err)
