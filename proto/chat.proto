@@ -17,24 +17,28 @@ message GameStarted {
     string type = 2;
 }
 
-message Play {
-    int32 plays = 1; // Jugada realizada
-    string player = 2; // Número del jugador
+message SendPlay {
+    string player = 1; // Número jugador
+    int32 plays = 2; // Jugada realizada
+    string stage = 3; // Etapa actual
+    int32 round = 4; // Ronda actual
+    int32 score = 5; // Puntaje obtenido
+    
 }
 
-message Result {
-    string RoundResult = 1; // Vivo o muerto
-    string StageStatus = 2; // Si termina la etapa o no
+message SendResult {
+    string stage = 1; // Etapa
+    bool alive = 2; // Resultado si sobrevivio o no
+    int32 round = 3; // Ronda actual
+    bool started =5; // Si comienza 
 }
-
 message MoneyAmount {
     string money = 1;
 }
 
-
 service ChatService {
     rpc JoinToGame(JoinRequest) returns (JoinReply); // Para unirse al juego
     rpc StageOrRoundStarted(GameStarted) returns (GameStarted); //Para preguntar si inicia la etapa o la ronda siguiente
-    rpc PlayTheGame(Play) returns (Result); // Para las jugadas y resultados
+    rpc SendPlays(SendPlay) returns (SendResult); // Para enviar las jugadas
     rpc GetMoneyAmount(MoneyAmount) returns (MoneyAmount); //Para solicitar la cantidad de dinero
 }

@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ChatServiceClient interface {
 	JoinToGame(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinReply, error)
 	StageOrRoundStarted(ctx context.Context, in *GameStarted, opts ...grpc.CallOption) (*GameStarted, error)
-	PlayTheGame(ctx context.Context, in *Play, opts ...grpc.CallOption) (*Result, error)
+	SendPlays(ctx context.Context, in *SendPlay, opts ...grpc.CallOption) (*SendResult, error)
 	GetMoneyAmount(ctx context.Context, in *MoneyAmount, opts ...grpc.CallOption) (*MoneyAmount, error)
 }
 
@@ -50,9 +50,9 @@ func (c *chatServiceClient) StageOrRoundStarted(ctx context.Context, in *GameSta
 	return out, nil
 }
 
-func (c *chatServiceClient) PlayTheGame(ctx context.Context, in *Play, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
-	err := c.cc.Invoke(ctx, "/grpc.ChatService/PlayTheGame", in, out, opts...)
+func (c *chatServiceClient) SendPlays(ctx context.Context, in *SendPlay, opts ...grpc.CallOption) (*SendResult, error) {
+	out := new(SendResult)
+	err := c.cc.Invoke(ctx, "/grpc.ChatService/SendPlays", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (c *chatServiceClient) GetMoneyAmount(ctx context.Context, in *MoneyAmount,
 type ChatServiceServer interface {
 	JoinToGame(context.Context, *JoinRequest) (*JoinReply, error)
 	StageOrRoundStarted(context.Context, *GameStarted) (*GameStarted, error)
-	PlayTheGame(context.Context, *Play) (*Result, error)
+	SendPlays(context.Context, *SendPlay) (*SendResult, error)
 	GetMoneyAmount(context.Context, *MoneyAmount) (*MoneyAmount, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
@@ -89,8 +89,8 @@ func (UnimplementedChatServiceServer) JoinToGame(context.Context, *JoinRequest) 
 func (UnimplementedChatServiceServer) StageOrRoundStarted(context.Context, *GameStarted) (*GameStarted, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StageOrRoundStarted not implemented")
 }
-func (UnimplementedChatServiceServer) PlayTheGame(context.Context, *Play) (*Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PlayTheGame not implemented")
+func (UnimplementedChatServiceServer) SendPlays(context.Context, *SendPlay) (*SendResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendPlays not implemented")
 }
 func (UnimplementedChatServiceServer) GetMoneyAmount(context.Context, *MoneyAmount) (*MoneyAmount, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMoneyAmount not implemented")
@@ -144,20 +144,20 @@ func _ChatService_StageOrRoundStarted_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatService_PlayTheGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Play)
+func _ChatService_SendPlays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendPlay)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServiceServer).PlayTheGame(ctx, in)
+		return srv.(ChatServiceServer).SendPlays(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/grpc.ChatService/PlayTheGame",
+		FullMethod: "/grpc.ChatService/SendPlays",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).PlayTheGame(ctx, req.(*Play))
+		return srv.(ChatServiceServer).SendPlays(ctx, req.(*SendPlay))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -196,8 +196,8 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChatService_StageOrRoundStarted_Handler,
 		},
 		{
-			MethodName: "PlayTheGame",
-			Handler:    _ChatService_PlayTheGame_Handler,
+			MethodName: "SendPlays",
+			Handler:    _ChatService_SendPlays_Handler,
 		},
 		{
 			MethodName: "GetMoneyAmount",

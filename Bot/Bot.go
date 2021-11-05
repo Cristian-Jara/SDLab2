@@ -3,29 +3,28 @@ package main
 import (
 	"log"
 	"fmt"
-	"context"
+	"math/rand"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pb "github.com/Cristian-Jara/SDLab2.git/proto"
 )
 
 const (
-	LiderIP = "10.6.40.227"
-	LocalIP = "localhost"
-	Puerto = ":50052"
+	LiderIP2 = "10.6.40.227"
+	LocalIP2 = "localhost"
+	Puerto2 = ":50052"
 )
 
 var (
-	Player = "-1" 
-	Status = "Alive"
-	Playing = false
-	ActualStage string
-	ActualRound int32
-	Jugada int32
-	Score = 0
+	Bot = "-1" 
+	BotStatus = "Alive"
+	BotPlaying = false
+	BotActualStage = ""
+	BotJugada int
 )
 
 func main(){
-	conn,err := grpc.Dial(fmt.Sprint(LocalIP,Puerto),grpc.WithInsecure())
+	conn,err := grpc.Dial(fmt.Sprint(LocalIP2,Puerto2),grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect: %s", err)
 	}
@@ -41,38 +40,36 @@ func main(){
 	
 	log.Printf("Response from server: %s", response.Reply)
 	if response.Player != "-1"{
-		Player = response.Player
-		for Status == "Alive" {
-			for Playing != true {
+		Bot = response.Player
+		for BotStatus == "Alive" {
+			for BotPlaying != true {
 				message := pb.GameStarted{Body:"", Type:""}
 				response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
 				if err != nil{
 					log.Fatalf("Error when calling SendMessage: %s", err)
 				}
 				if response.Body == "Si"{
-					Playing = true
-					ActualStage = response.Type
+					BotPlaying = true
+					BotActualStage = response.Type
 				} 
 			}
-			if ActualStage == "1" {
+			if BotActualStage == "Stage 1" {
 				log.Printf("Escoge un numero del 1 al 10")
-				fmt.Scanln(&Jugada)
-				for Jugada<1 || Jugada >10 {
-					log.Printf("Escoge un numero válido")
-					fmt.Scanln(&Jugada)
-				}
-				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
-				response,err := serviceClient.SendPlays(context.Background(),&message)
+				BotJugada = rand.Intn(10) + 1
+				message := pb.Play{Plays: int32(BotJugada), Player: Bot}
+				response,err := serviceClient.PlayTheGame(context.Background(),&message)
 				if err != nil{
 					log.Fatalf("Error when calling SendMessage: %s", err)
 				}
-				if response.Alive == false{
+				if response.RoundResult == "Moriste"{
 					log.Printf("Haz muerto")
-					Status = "Dead"
+					BotStatus = "Dead"
 					break
 				}
 				log.Printf("Sobreviviste la ronda")
+
 			}
+
 		}
 	}
 }
