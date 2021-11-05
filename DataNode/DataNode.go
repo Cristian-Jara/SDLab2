@@ -29,6 +29,15 @@ func AppendData(player string, path string){
 	}
 }
 
+func ReadData(player string)([]string){
+	for _,info := range PlayersData {
+		if info.player == player {
+			return info.paths
+		}
+	}
+	return nil
+}
+
 func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult, error) {
 	//aqui implementar la escritura del archivo de texto
 	var path = "DataNode/Jugadas/jugador_" + in.Player + "_ronda_" + in.Stage + ".txt"
@@ -62,6 +71,22 @@ func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult
 	return &pb.SendResult{ Alive: true },nil
 }
 
+func (s *server) GetPlayerInfo(ctx context.Context, in *pb.PlayerInfo) (*pb.PlayerInfo, error) {
+	paths := ReadData(in.Message)
+	if paths == nil{
+		return &pb.PlayerInfo{Message: ""}, nil
+	}
+	message := ""
+	for _, path := range paths {
+		//Leer el archivo y chantar todo
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		message += string(b)
+	}
+	return &pb.PlayerInfo{Message: message}, nil
+}
 var PlayersData []PlayerData
 
 func main() {

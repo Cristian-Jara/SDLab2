@@ -36,9 +36,14 @@ message MoneyAmount {
     string money = 1;
 }
 
+message PlayerInfo{
+    string message = 1;
+}
+
 service ChatService {
     rpc JoinToGame(JoinRequest) returns (JoinReply); // Para unirse al juego
     rpc StageOrRoundStarted(GameStarted) returns (GameStarted); //Para preguntar si inicia la etapa o la ronda siguiente
     rpc SendPlays(SendPlay) returns (SendResult); // Para enviar las jugadas
     rpc GetMoneyAmount(MoneyAmount) returns (MoneyAmount); //Para solicitar la cantidad de dinero
+    rpc GetPlayerInfo(PlayerInfo) returns (PlayerInfo);
 }

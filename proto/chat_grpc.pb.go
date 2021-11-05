@@ -22,6 +22,7 @@ type ChatServiceClient interface {
 	StageOrRoundStarted(ctx context.Context, in *GameStarted, opts ...grpc.CallOption) (*GameStarted, error)
 	SendPlays(ctx context.Context, in *SendPlay, opts ...grpc.CallOption) (*SendResult, error)
 	GetMoneyAmount(ctx context.Context, in *MoneyAmount, opts ...grpc.CallOption) (*MoneyAmount, error)
+	GetPlayerInfo(ctx context.Context, in *PlayerInfo, opts ...grpc.CallOption) (*PlayerInfo, error)
 }
 
 type chatServiceClient struct {
@@ -68,6 +69,15 @@ func (c *chatServiceClient) GetMoneyAmount(ctx context.Context, in *MoneyAmount,
 	return out, nil
 }
 
+func (c *chatServiceClient) GetPlayerInfo(ctx context.Context, in *PlayerInfo, opts ...grpc.CallOption) (*PlayerInfo, error) {
+	out := new(PlayerInfo)
+	err := c.cc.Invoke(ctx, "/grpc.ChatService/GetPlayerInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility
@@ -76,6 +86,7 @@ type ChatServiceServer interface {
 	StageOrRoundStarted(context.Context, *GameStarted) (*GameStarted, error)
 	SendPlays(context.Context, *SendPlay) (*SendResult, error)
 	GetMoneyAmount(context.Context, *MoneyAmount) (*MoneyAmount, error)
+	GetPlayerInfo(context.Context, *PlayerInfo) (*PlayerInfo, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -94,6 +105,9 @@ func (UnimplementedChatServiceServer) SendPlays(context.Context, *SendPlay) (*Se
 }
 func (UnimplementedChatServiceServer) GetMoneyAmount(context.Context, *MoneyAmount) (*MoneyAmount, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMoneyAmount not implemented")
+}
+func (UnimplementedChatServiceServer) GetPlayerInfo(context.Context, *PlayerInfo) (*PlayerInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerInfo not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 
@@ -180,6 +194,24 @@ func _ChatService_GetMoneyAmount_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_GetPlayerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PlayerInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetPlayerInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpc.ChatService/GetPlayerInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetPlayerInfo(ctx, req.(*PlayerInfo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +234,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMoneyAmount",
 			Handler:    _ChatService_GetMoneyAmount_Handler,
+		},
+		{
+			MethodName: "GetPlayerInfo",
+			Handler:    _ChatService_GetPlayerInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -32,9 +32,7 @@ func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult
 	fmt.Println("Nueva jugada recibida: \nJugador " + in.Player + " jugó:  %v",in.Plays)
 	conn, err := grpc.Dial(address+":50058", grpc.WithInsecure())
 	DataNodeService := pb.NewChatServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := DataNodeService.SendPlays(ctx, &pb.SendPlay{Player: in.Player, Plays: in.Plays, Stage: in.Stage})
+	r, err := DataNodeService.SendPlays(context.Background(), &pb.SendPlay{Player: in.Player, Plays: in.Plays, Stage: in.Stage})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
@@ -54,6 +52,25 @@ func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult
 	}
 
 	return &pb.SendResult{}, nil
+}
+
+func (s *server) GetPlayerInfo(ctx context.Context, in *pb.PlayerInfo) (*pb.PlayerInfo, error) {
+	list := [3]string{":50058",":50058",":50058"} //Ingresar las direcciones IP
+	// "10.6.40.225:50058" // IP1
+	// "10.6.40.227:50058" // IP2
+	// "10.6.40.229:50058" // IP3
+	message := ""
+	for _, dir := range list {
+		//Leer el archivo y chantar todo
+		conn, err := grpc.Dial(dir, grpc.WithInsecure())
+		DataNodeService := pb.NewChatServiceClient(conn)
+		r, err := DataNodeService.GetPlayerInfo(context.Background(), &pb.PlayerInfo{Message: in.Message})
+		if err != nil {
+			log.Fatalf("Problema al obtener la información del jugador: %v", err)
+		}
+		message += r.Message
+	}
+	return &pb.PlayerInfo{Message: message}, nil
 }
 
 func main(){
