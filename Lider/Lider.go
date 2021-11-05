@@ -21,6 +21,7 @@ type PlayerNode struct {
 	id    string
 	score int
 	live bool
+	played bool
 }
 
 
@@ -31,7 +32,7 @@ func (s *Server) JoinToGame(ctx context.Context, message *pb.JoinRequest) (*pb.J
 			GameStart = true
 		}
 		/////////////////////////////////////////////////////////////////////////
-		playerlist = append(playerlist, PlayerNode{strconv.Itoa(PlayersCount), 0, true})
+		playerlist = append(playerlist, PlayerNode{strconv.Itoa(PlayersCount), 0, true, false})
 		/////////////////////////////////////////////////////////////////////////
 
 		log.Printf("Received message body from client: %s",message.Request)
@@ -42,14 +43,27 @@ func (s *Server) JoinToGame(ctx context.Context, message *pb.JoinRequest) (*pb.J
 	}
 } 
 func (s *Server)  StageOrRoundStarted(ctx context.Context, message *pb.GameStarted) (*pb.GameStarted, error){
-	if Start == true {
-		leftPlayers-=1
-		if leftPlayers == 0 {
-			Start = false
+	id,_ := strconv.Atoi(message.Body)
+	if playerlist[id -1].live == true{
+		if GameFinished == false{
+			if Start == true && playerlist[id -1].played == false {
+				playerlist[id - 1].played = true
+				leftPlayers-=1
+				if leftPlayers == 0 {
+					Start = false
+					for idx, _ := range playerlist {
+						playerlist[idx].played = false
+					}
+				}
+				return &pb.GameStarted{Body: "Si", Type: Stage},nil
+			}else {
+				return &pb.GameStarted{Body: "No"},nil
+			}
+		}else{
+			return &pb.GameStarted{Body: "Win"},nil
 		}
-		return &pb.GameStarted{Body: "Si", Type: Stage},nil
-	}else {
-		return &pb.GameStarted{Body: "No"},nil
+	}else{
+		return &pb.GameStarted{Body: "Killed"},nil
 	}
 } 
 
@@ -94,10 +108,15 @@ func JugadorMuerto(Body string){
 
 func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendResult,error){
 	//if stage 1
+	id,_ := strconv.Atoi(message.Player)
+	playerlist[id - 1].played = true
 	Sobrevive := true
 	leftPlayers-=1
 	if leftPlayers == 0 {
 		Start = false
+		for idx, _ := range playerlist {
+			playerlist[idx].played = false
+		}
 	}
 	log.Printf("Received message body from client: %v",message.Plays)
 	conn, err := grpc.Dial(NameNodeAddress, grpc.WithInsecure())
@@ -109,9 +128,11 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 	NameNodeServer.SendPlays(context.Background(), &pb.SendPlay{Player: message.Player, Plays: message.Plays,  Stage: message.Stage, Round: message.Round, Score: message.Score})
 	if Stage == "1"{
 		if int(message.Plays) < jugada {
+			playerlist[id - 1].score += int(message.Plays)
 			return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 		}else{
 			Sobrevive = false
+			PlayersCount-=1
 			//JugadorMuerto("Jugador_"+message.Player+" Ronda_"+Stage)
 			return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 		}
@@ -124,7 +145,7 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 			}
 		}
 		for leftPlayers != 0 {
-			time.Sleep(10*time.Millisecond)
+			time.Sleep(20*time.Millisecond)
 		} 
 		score_team1 := 0
 		for _,aux := range team1{
@@ -137,35 +158,38 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 		if jugada%2!=score_team1%2 && jugada%2!=score_team2%2 { // NOBODY WINS
 			die:=rand.Intn(2)
 			if die==0{
-				for _,aux := range team1{
-					aux.live = false
+				for idx,_ := range team1{
+					team1[idx].live = false
 				}
 				teamf = team2
 			}else{
-				for _, aux := range team2{
-					aux.live = false
+				for idx,_ := range team2{
+					team2[idx].live = false
 				}
 				teamf = team1
 			}
 		} else if jugada%2==score_team1%2 && jugada%2!=score_team2%2 { // TEAM 1 WINS
-			for _,aux := range team2{
-				aux.live = false
+			for idx,_ := range team2{
+				team2[idx].live = false
 			}
 			teamf = team1
 		} else if jugada%2==score_team1%2 && jugada%2==score_team2%2 { // TEAM 2 WINS
-			for _,aux := range team1{
-				aux.live = false
+			for idx,_ := range team1{
+				team1[idx].live = false
 			}
 			teamf = team2
 		} // IF EVERYBODY WINS NOBODY DIES
-		for idx,_ := range team1{
-			if team1[idx].id == message.Player{
-				return &pb.SendResult{Stage: Stage, Alive: team1[idx].live, Round: int32(RoundCount), Started: true}, nil
-			}else if team2[idx].id == message.Player{
-				return &pb.SendResult{Stage: Stage, Alive: team1[idx].live, Round: int32(RoundCount), Started: true}, nil
+		for idx,_ := range playerlist{
+			playerlist[idx].live = false
+		}
+		Sobrevive := false
+		for _,value := range teamf{
+			if value.id == message.Player{
+				playerlist[id - 1].live = true
+				Sobrevive = true
 			}
 		}
-		return nil, nil
+		return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 	}else if Stage =="3"{
 		log.Printf("Jugando etapa 3")
 		for idx,_ := range teamgg{
@@ -173,6 +197,10 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 				teamgg[idx].score = int(message.Plays)
 			}
 		}
+
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		} 
 
 		score_j1 := 0
 		score_j2 := 0
@@ -190,15 +218,22 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 			} else if score_j1 < score_j2{
 				teamgg[i].live = false
 			}
-			i+=2
+			i+=1
 		}
-		for idx,_ := range teamgg{
-			if teamgg[idx].live{
-				fmt.Println("El jugador: " + teamgg[idx].id + " ha ganado el Squid Game")
+		for idx,_ := range playerlist{
+			playerlist[idx].live = false
+		}
+		Sobrevive := false
+		for _,value := range teamgg{
+			if value.id == message.Player{
+				playerlist[id - 1].live = true
+				Sobrevive = true
+				fmt.Println("El jugador: " + value.id + " ha ganado el Squid Game")
 			}
-			return &pb.SendResult{Stage: Stage, Alive: teamgg[idx].live, Round: int32(RoundCount), Started: true}, nil
 		}
-		return nil, nil
+
+		return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
+
 		//return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 
 	}else{
@@ -236,6 +271,7 @@ var (
 	Stage = "1"
 	input string
 	winners = 0
+	GameFinished = false
 )
 
 var team1 []PlayerNode
@@ -305,33 +341,29 @@ func main(){
 	}
 
 	if PlayersCount == PlayerLimit{   // acá empieza sg
-		/*
-		for input != "start" || leftPlayers != 0{
-			fmt.Println("Ingresa 'start' para comenzar la etapa 1: ")
-			fmt.Scanln(&input)
-			if input == "start" { 
-				Start = true
-				fmt.Println("Esperando que todos los jugadores esten listos ....")
-				for leftPlayers!=0{
-					continue
-				}
-			}
-		}*/
 		interfaz(Stage)
 		fmt.Println("Ha comenzado la etapa: " + Stage)
 		rand.Seed(time.Now().UnixNano())
+		Start = true
+		fmt.Println("Esperando que los jugadores ingresen a la etapa ...")
+		for leftPlayers != 0 { //Contar que los jugadores ingresarán a la etapa
+			time.Sleep(20*time.Millisecond)
+		}
 		for RoundCount < 5 {
 			time.Sleep(1*time.Second)
 			jugada = rand.Intn(5) + 6
 			fmt.Println("Jugada de Lider: " + strconv.Itoa(jugada))
 			leftPlayers = PlayersCount // Contar que los jugadores ingresen a la ronda
 			Start = true
+			fmt.Println("Esperando que todos los jugadores ingresen a la ronda ...")
 			for leftPlayers != 0 {
-				time.Sleep(10*time.Millisecond)
+				time.Sleep(20*time.Millisecond)
 			}
 			leftPlayers = PlayersCount //Contar que los jugadores jueguen
+			Start = true
+			fmt.Println("Esperando que todos los jugadores ingresen su jugada ...")
 			for leftPlayers != 0 {
-				time.Sleep(10*time.Millisecond)
+				time.Sleep(20*time.Millisecond)
 			}
 			RoundCount+=1
 		}
@@ -339,12 +371,14 @@ func main(){
 		for j := 0; j < PlayerLimit; j++ {
 			if (playerlist[j].score < 21) && (playerlist[j].live == true) {
 				playerlist[j].live = false
+				PlayersCount -=1
 				puntaje := strconv.Itoa(int(playerlist[j].score))
 				fmt.Println("El jugador: " + playerlist[j].id + " fue eliminado con puntaje : " + puntaje)
 				statement := "Jugador_" + playerlist[j].id + " Ronda_" + Stage
 				log.Printf(" Ha muerto: %s ", statement)
 			}
 		}
+		Start = false
 
 		//// Jugadores ya eliminados, se anuncian los sobrevivientes  /////////
 
@@ -356,15 +390,26 @@ func main(){
 				fmt.Println("Jugador: " + playerlist[i].id + " pasa el nivel 1")
 			}
 		}
+		if PlayersCount == 1{
+			for _,value := range playerlist{
+				if value.live == true{
+					fmt.Println("El jugador: " + value.id + " ha ganado el Squid Game")
+					GameFinished = true
+					time.Sleep(10*time.Second)
+					return
+				}
+			}
+		}
 		Start = false
 		Stage = "2"
 		interfaz(Stage)
 		fmt.Println("Ha comenzado la etapa: " + Stage)
 		for winners%2 == 1{
 			//Borrar un jugador al azar porque sobra 1//
-			jugada = rand.Intn(15)
+			jugada = rand.Intn(PlayerLimit - 1)
 			if playerlist[jugada].live == true {
 				playerlist[jugada].live = false
+				PlayersCount-=1
 				winners -= 1
 				fmt.Println("Jugador: " + playerlist[jugada].id + " es eliminado al azar")
 				statement := "Jugador_" + playerlist[jugada].id + " Ronda_" + Stage
@@ -372,34 +417,59 @@ func main(){
 				log.Printf(" Ha muerto: %s ", statement)
 			}
 		}
+
 		
 		// Empieza la etapa 2 separando los ganadores de la ronda 1 en 2 grupos //
 		swap := 0
-		for i := 0; i < 16; i++ {
+		for i := 0; i < PlayerLimit; i++ {
 			if playerlist[i].live == true {
 				if swap == 0 {
-					team1 = append(team1, PlayerNode{playerlist[i].id, 0, true})
+					team1 = append(team1, PlayerNode{playerlist[i].id, 0, true,false})
 					fmt.Println("Se agrega a team 1: " + playerlist[i].id)
 					swap = 1
 				} else {
-					team2 = append(team2, PlayerNode{playerlist[i].id, 0, true})
+					team2 = append(team2, PlayerNode{playerlist[i].id, 0, true,false})
 					fmt.Println("Se agrega a team 2: " + playerlist[i].id)
 					swap = 0
 				}
 
 			}
 		}
+		leftPlayers = PlayersCount
+		Start = true
+		fmt.Println("Esperando que los jugadores ingresen a la etapa ...")
+		for leftPlayers != 0 { //Contar que los jugadores ingresarán a la etapa
+			time.Sleep(20*time.Millisecond)
+		}
 
 		// Hasta acá se tienen los jugadores restantes en 2 equipos, se inicia etapa 2 //
-
-		rand.Seed(time.Now().UnixNano())
-		jugada = rand.Intn(3)
-		jugada = jugada + 1
+		jugada = rand.Intn(4) + 1
 		fmt.Println("Jugada del lider: " + strconv.Itoa(jugada))
+		leftPlayers = PlayersCount // Contar que los jugadores ingresen a la ronda
+		Start = true
+		fmt.Println("Esperando que todos los jugadores ingresen a la ronda ...")
 		for leftPlayers != 0 {
-				time.Sleep(10*time.Millisecond)
+			time.Sleep(20*time.Millisecond)
 		}
-		time.Sleep(1*time.Second)
+		leftPlayers = PlayersCount //Contar que los jugadores jueguen
+		Start = true
+		fmt.Println("Esperando que todos los jugadores ingresen su jugada ...")
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}
+		/* // -----------------------------------------------------------------------> LA MARIA AÑADIO DESDE ACA
+		
+		fmt.Println("Jugada de Lider: " + strconv.Itoa(jugada))
+		leftPlayers = PlayersCount // Contar que los jugadores ingresen a la ronda
+		Start = true
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}
+		leftPlayers = PlayersCount //Contar que los jugadores jueguen
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}                           // ----------------------------------------------------------------------> HASTA ACA
+		*/
 		//fmt.Println("Ingresa start tras terminar los turnos de los jugadores: ")
 		//fmt.Scanln(&start)
 		/*
@@ -474,7 +544,7 @@ func main(){
 				fmt.Println("El jugador: " + teamf[i].id + " pasa a la siguiente etapa")
 			}
 		}
-
+		PlayersCount = len(teamf)
 		////////////////// Se elimina el jugador que sobra, si hay uno //////////////////////
 		/*
 		for winners%2 == 1 {
@@ -488,9 +558,84 @@ func main(){
 				log.Printf(" Ha muerto: %s ", statement)
 			}
 		}*/
-		Stage = "3"
-		Start = false
 
+		if PlayersCount == 1{
+			for _,value := range playerlist{
+				if value.live == true{
+					fmt.Println("El jugador: " + value.id + " ha ganado el Squid Game")
+					GameFinished = true
+					time.Sleep(10*time.Second)
+					return
+				}
+			}
+		}
+		Stage = "3"   
+		            // -----------------------------------------------------------------------> LA MARIA AÑADIO DESDE ACA
+		Start = false
+		interfaz(Stage)
+		fmt.Println("Ha comenzado la etapa: " + Stage)
+		Start = true
+		fmt.Println("Esperando que los jugadores ingresen a la etapa ...")
+		for leftPlayers != 0 { //Contar que los jugadores ingresarán a la etapa
+			time.Sleep(20*time.Millisecond)
+		}
+
+		jugada = rand.Intn(10) + 1
+		fmt.Println("Jugada del lider: " + strconv.Itoa(jugada))
+		leftPlayers = PlayersCount // Contar que los jugadores ingresen a la ronda
+		Start = true
+		fmt.Println("Esperando que todos los jugadores ingresen a la ronda ...")
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}
+		leftPlayers = PlayersCount //Contar que los jugadores jueguen
+		Start = true
+		fmt.Println("Esperando que todos los jugadores ingresen su jugada ...")
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}
+		/*
+		for i := 0; i < len(teamf); i++ {
+			if teamf[i].live == true {
+				teamgg = append(teamgg, PlayerNode{teamf[i].id, 0, true,false})
+			}
+			Start = false // ----------------------------------------------------------------------------------> PREGUNTA PAL PANA
+			interfaz(Stage)
+			jugada = rand.Intn(9)
+			jugada = jugada + 1
+			fmt.Println("Jugada de lider: " + strconv.Itoa(jugada))
+
+			////// Loop de jugadas para cada player ///////
+			for i := 0; i < len(teamgg); i++ {
+				teamgg[i].score = rand.Intn(9) + 1
+				i++
+			}
+		}
+
+
+
+
+		rand.Seed(time.Now().UnixNano())
+		jugada = rand.Intn(3)
+		jugada = jugada + 1
+		fmt.Println("Jugada del lider: " + strconv.Itoa(jugada))
+		for leftPlayers != 0 {
+				time.Sleep(20*time.Millisecond)
+		}
+		time.Sleep(1*time.Second)   
+		
+		fmt.Println("Jugada de Lider: " + strconv.Itoa(jugada))
+		leftPlayers = PlayersCount // Contar que los jugadores ingresen a la ronda
+		Start = true
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}
+		leftPlayers = PlayersCount //Contar que los jugadores jueguen
+		for leftPlayers != 0 {
+			time.Sleep(20*time.Millisecond)
+		}                           // ----------------------------------------------------------------------> HASTA ACA
+
+		*/
 		////////////////// Acá empieza la etapa 3 y final///////////////////////////////////
 		/*
 		for i := 0; i < len(teamf); i++ {
@@ -552,16 +697,5 @@ func main(){
 
 
 	}
-	
-	for {
-		fmt.Scanln(&input)
-		if input == "end" {
-			break
-		} else if input == "play"{
-			Start = true
-			leftPlayers = PlayersCount 
-		} else if input == "stop" {
-			Start = false
-		}
-	}
+
 }

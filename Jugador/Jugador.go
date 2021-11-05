@@ -19,6 +19,7 @@ var (
 	Player = "-1" 
 	Status = "Alive"
 	Playing = false
+	Finished = false
 	ActualStage string
 	ActualRound int32
 	Jugada int32
@@ -63,7 +64,7 @@ func main(){
 			}
 			log.Printf("Esperando a los demás jugadores ... ")
 			for Playing != true {
-				message := pb.GameStarted{Body:"", Type:""}
+				message := pb.GameStarted{Body:Player, Type:""}
 				response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
 				if err != nil{
 					log.Fatalf("Error when calling SendMessage: %s", err)
@@ -71,7 +72,22 @@ func main(){
 				if response.Body == "Si"{
 					Playing = true
 					ActualStage = response.Type
-				} 
+				}else if response.Body == "Killed"{
+					Status = "Dead"
+					break
+				}else if response.Body == "Win"{
+					Finished = true
+					break
+				}
+				
+			}
+			if Status != "Alive"{
+				log.Printf("Haz muerto elegido aleatoriamente") 
+				break
+			}
+			if Finished == true {
+				log.Printf("Felicidades haz ganado el juego del calamar") 
+				break
 			}
 			Playing = false
 			time.Sleep(1*time.Second)
@@ -80,14 +96,14 @@ func main(){
 				for ActualRound<5 && Score <21{
 					log.Printf("Esperando inicie la ronda ....")
 					for Playing != true {
-						message := pb.GameStarted{Body:"", Type:""}
+						message := pb.GameStarted{Body:Player, Type:""}
 						response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
 						if err != nil{
 							log.Fatalf("Error when calling SendMessage: %s", err)
 						}
 						if response.Body == "Si"{
 							Playing = true
-						} 
+						}
 					}
 					log.Printf("Escoge un numero del 1 al 10")
 					fmt.Scanln(&Jugada)
@@ -122,8 +138,89 @@ func main(){
 			} else if ActualStage == "2" {
 				ActualRound = 1
 				log.Printf("Etapa 2")
+				log.Printf("Esperando inicie la ronda ....")
+				for Playing != true {
+					message := pb.GameStarted{Body:Player, Type:""}
+					response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
+					if err != nil{
+						log.Fatalf("Error when calling SendMessage: %s", err)
+					}
+					if response.Body == "Si"{
+						Playing = true
+					}
+					if response.Body == "Killed"{
+						Status = "Dead"
+						break
+					} 
+				}
+				if Status != "Alive"{
+					log.Printf("Haz muerto elegido aleatoriamente") 
+					break
+				}
+				log.Printf("Escoge un numero del 1 al 4")
+				fmt.Scanln(&Jugada)
+				Score += int(Jugada)
+				for Jugada<1 || Jugada >4 {
+					log.Printf("Escoge un numero válido")
+					fmt.Scanln(&Jugada)
+				}
+				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
+				response,err := serviceClient.SendPlays(context.Background(),&message)
+				if err != nil{
+					log.Fatalf("Error when calling SendMessage: %s", err)
+				}
+				if response.Alive == false{
+					log.Printf("Haz muerto")
+					Status = "Dead"
+					break
+				}
+				Playing = false
+				time.Sleep(1*time.Second)
+				if Status == "Alive" {
+					log.Printf("Felicidades, sobreviviste el nivel 2")
+				}
 			} else if ActualStage == "3" {
 				log.Printf("Etapa 3")
+				log.Printf("Esperando inicie la ronda ....")
+				for Playing != true {
+					message := pb.GameStarted{Body:Player, Type:""}
+					response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
+					if err != nil{
+						log.Fatalf("Error when calling SendMessage: %s", err)
+					}
+					if response.Body == "Si"{
+						Playing = true
+					} 
+					if response.Body == "Killed"{
+						Status = "Dead"
+						break
+					} 
+				}
+				if Status != "Alive"{
+					log.Printf("Haz muerto elegido aleatoriamente") //Por perkin
+					break
+				}
+				log.Printf("Escoge un numero del 1 al 10")
+				fmt.Scanln(&Jugada)
+				Score += int(Jugada)
+				for Jugada<1 || Jugada >10 {
+					log.Printf("Escoge un numero válido")
+					fmt.Scanln(&Jugada)
+				}
+				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
+				response,err := serviceClient.SendPlays(context.Background(),&message)
+				if err != nil{
+					log.Fatalf("Error when calling SendMessage: %s", err)
+				}
+				if response.Alive == false{
+					log.Printf("Haz muerto")
+					Status = "Dead"
+				}
+				Playing = false
+				time.Sleep(1*time.Second)
+				if Status == "Alive" {
+					log.Printf("Felicidades, sobreviviste el nivel 3")
+				}
 			}
 		}
 	}
