@@ -69,7 +69,7 @@ func (s *Server)  StageOrRoundStarted(ctx context.Context, message *pb.GameStart
 } 
 
 func JugadorMuerto(Body string){
-	conn, err := amqp.Dial("amqp://guest:guest@10.6.40.227:50069/")
+	conn, err := amqp.Dial("amqp://admin:test@10.6.40.227:50069/")
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
