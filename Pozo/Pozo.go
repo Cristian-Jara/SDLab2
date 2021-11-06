@@ -49,7 +49,7 @@ func main() {
 		}
 	}()
 
-	conn, err := amqp.Dial("amqp://admin:test@"+LiderIP+Puerto+"/")
+	conn, err := amqp.Dial("amqp://guest:guest@"+LiderIP+Puerto+"/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
