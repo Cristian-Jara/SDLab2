@@ -136,7 +136,7 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 			PlayersCount-=1
 			playerlist[id - 1].score += int(message.Plays)
 			playerlist[id - 1].live = false
-			//JugadorMuerto("Jugador_"+message.Player+" Ronda_"+Stage)
+			JugadorMuerto("Jugador_"+message.Player+" Ronda_"+Stage)
 			return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 		}
 	}else if Stage =="2"{
@@ -193,6 +193,7 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 		}
 		if Sobrevive != true {
 			playerlist[id - 1].live = false
+			JugadorMuerto("Jugador_"+message.Player+" Ronda_"+Stage)
 		}
 		return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
 	}else if Stage =="3"{
@@ -234,6 +235,7 @@ func (s *Server)  SendPlays(ctx context.Context, message *pb.SendPlay)(*pb.SendR
 		}
 		if Sobrevive != true{
 			playerlist[id - 1].live = false
+			JugadorMuerto("Jugador_"+message.Player+" Ronda_"+Stage)
 		}
 
 		return &pb.SendResult{Stage: Stage, Alive: Sobrevive, Round: int32(RoundCount), Started: true}, nil
@@ -381,6 +383,7 @@ func main(){
 				fmt.Println("El jugador: " + playerlist[j].id + " fue eliminado con puntaje : " + puntaje)
 				statement := "Jugador_" + playerlist[j].id + " Ronda_" + Stage
 				log.Printf(" Ha muerto: %s ", statement)
+				JugadorMuerto("Jugador_"+playerlist[j].id +" Ronda_"+Stage)
 			}
 		}
 		Start = false
