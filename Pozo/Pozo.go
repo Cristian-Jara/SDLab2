@@ -29,7 +29,6 @@ var DineroAcum int = 0
 
 const (
 	LiderIP = "10.6.40.227"
-	LocalIP = "localhost"
 	Puerto = ":5672"
 )
 

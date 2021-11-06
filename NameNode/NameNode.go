@@ -23,11 +23,11 @@ func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult
 	rand.Seed(time.Now().UnixNano())
 	id := rand.Intn(3)
 	if id == 0 {
-		address = "" // "10.6.40.225" // IP1
+		address = "10.6.40.225" // IP1
 	} else if id == 1 {
-		address = "" // "10.6.40.227" // IP2
+		address = "10.6.40.227" // IP2
 	} else {
-		address = "" // "10.6.40.229" // IP3
+		address = "10.6.40.229" // IP3
 	}
 	fmt.Println("Nueva jugada recibida: \nJugador " + in.Player + " jugó:  %v",in.Plays)
 	conn, err := grpc.Dial(address+":50058", grpc.WithInsecure())
@@ -55,7 +55,7 @@ func (s *server) SendPlays(ctx context.Context, in *pb.SendPlay) (*pb.SendResult
 }
 
 func (s *server) GetPlayerInfo(ctx context.Context, in *pb.PlayerInfo) (*pb.PlayerInfo, error) {
-	list := [3]string{":50058",":50058",":50058"} //Ingresar las direcciones IP
+	list := [3]string{"10.6.40.225:50058","10.6.40.227:50058","10.6.40.229:50058"} //Ingresar las direcciones IP
 	// "10.6.40.225:50058" // IP1
 	// "10.6.40.227:50058" // IP2
 	// "10.6.40.229:50058" // IP3

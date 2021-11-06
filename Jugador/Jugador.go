@@ -11,7 +11,6 @@ import (
 
 const (
 	LiderIP = "10.6.40.227"
-	LocalIP = "localhost"
 	Puerto = ":50052"
 )
 
@@ -29,7 +28,7 @@ var (
 
 
 func main(){
-	conn,err := grpc.Dial(fmt.Sprint(LocalIP,Puerto),grpc.WithInsecure())
+	conn,err := grpc.Dial(fmt.Sprint(LiderIP,Puerto),grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect: %s", err)
 	}
@@ -62,7 +61,7 @@ func main(){
 					log.Printf("Valor erróneo, ingresa nuevamente")
 				}
 			}
-			log.Printf("Esperando a los demás jugadores ... ")
+			log.Printf("Esperando a los demás jugadores y al Lider ... ")
 			for Playing != true {
 				message := pb.GameStarted{Body:Player, Type:""}
 				response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
@@ -93,7 +92,7 @@ func main(){
 			time.Sleep(1*time.Second)
 			if ActualStage == "1" {
 				ActualRound = 1
-				for ActualRound<5 && Score <21{
+				for ActualRound<5 {
 					log.Printf("Esperando inicie la ronda ....")
 					for Playing != true {
 						message := pb.GameStarted{Body:Player, Type:""}
@@ -138,25 +137,6 @@ func main(){
 			} else if ActualStage == "2" {
 				ActualRound = 1
 				log.Printf("Etapa 2")
-				log.Printf("Esperando inicie la ronda ....")
-				for Playing != true {
-					message := pb.GameStarted{Body:Player, Type:""}
-					response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
-					if err != nil{
-						log.Fatalf("Error when calling SendMessage: %s", err)
-					}
-					if response.Body == "Si"{
-						Playing = true
-					}
-					if response.Body == "Killed"{
-						Status = "Dead"
-						break
-					} 
-				}
-				if Status != "Alive"{
-					log.Printf("Haz muerto elegido aleatoriamente") 
-					break
-				}
 				log.Printf("Escoge un numero del 1 al 4")
 				fmt.Scanln(&Jugada)
 				Score += int(Jugada)
@@ -181,25 +161,7 @@ func main(){
 				}
 			} else if ActualStage == "3" {
 				log.Printf("Etapa 3")
-				log.Printf("Esperando inicie la ronda ....")
-				for Playing != true {
-					message := pb.GameStarted{Body:Player, Type:""}
-					response,err := serviceClient.StageOrRoundStarted(context.Background(),&message)
-					if err != nil{
-						log.Fatalf("Error when calling SendMessage: %s", err)
-					}
-					if response.Body == "Si"{
-						Playing = true
-					} 
-					if response.Body == "Killed"{
-						Status = "Dead"
-						break
-					} 
-				}
-				if Status != "Alive"{
-					log.Printf("Haz muerto elegido aleatoriamente") //Por perkin
-					break
-				}
+
 				log.Printf("Escoge un numero del 1 al 10")
 				fmt.Scanln(&Jugada)
 				Score += int(Jugada)
@@ -215,11 +177,13 @@ func main(){
 				if response.Alive == false{
 					log.Printf("Haz muerto")
 					Status = "Dead"
+					break
 				}
 				Playing = false
 				time.Sleep(1*time.Second)
 				if Status == "Alive" {
-					log.Printf("Felicidades, sobreviviste el nivel 3")
+					log.Printf("Felicidades, sobreviviste el nivel 3, haz ganado!")
+					break
 				}
 			}
 		}
