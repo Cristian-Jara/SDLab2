@@ -70,11 +70,11 @@ func main(){
 				
 			}
 			if Status != "Alive"{
-				log.Printf("Haz muerto elegido aleatoriamente") 
+				log.Printf("Haz muerto elegido aleatoriamente %s", Player) 
 				break
 			}
 			if Finished == true {
-				log.Printf("Felicidades haz ganado el juego del calamar") 
+				log.Printf("Felicidades haz ganado el juego del calamar bot %s",Player) 
 				break
 			}
 			Playing = false
@@ -97,7 +97,7 @@ func main(){
 					}
 					time.Sleep(1*time.Second)
 					Jugada = int32(rand.Intn(10) + 1) 
-					log.Printf("El bot a jugado %v",Jugada)
+					log.Printf("El bot %s a jugado %v",Player,Jugada)
 					Score += int(Jugada)
 					message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
 					response,err := serviceClient.SendPlays(context.Background(),&message)
@@ -105,20 +105,20 @@ func main(){
 						log.Fatalf("Error when calling SendMessage: %s", err)
 					}
 					if response.Alive == false{
-						log.Printf("El bot ha muerto")
+						log.Printf("El bot %s ha muerto",Player)
 						Status = "Dead"
 						break
 					}
-					log.Printf("El bot sobrevivió la ronda")
+					log.Printf("El bot %s sobrevivió la ronda",Player)
 					ActualRound+=1
 					Playing = false
 					time.Sleep(2*time.Second)
 				}
 				if Status == "Alive" && Score >=21 {
-					log.Printf("Felicidades bot, sobreviviste el nivel 1")
+					log.Printf("Felicidades bot %s, sobreviviste el nivel 1",Player)
 				}
 				if Score < 21 {
-					log.Printf("Mala suerte, no alcanzaste los puntos necesarios, has muerto")
+					log.Printf("Mala suerte bot %s, no alcanzaste los puntos necesarios, has muerto",Player)
 					Status = "Dead"
 					break
 				}
@@ -127,7 +127,7 @@ func main(){
 				log.Printf("Etapa 2")
 				time.Sleep(2*time.Second)
 				Jugada = int32(rand.Intn(4) + 1) 
-				log.Printf("El bot ha jugado %v",Jugada)
+				log.Printf("El bot %s ha jugado %v",Player, Jugada)
 				Score += int(Jugada)
 				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
 				response,err := serviceClient.SendPlays(context.Background(),&message)
@@ -135,33 +135,33 @@ func main(){
 					log.Fatalf("Error when calling SendMessage: %s", err)
 				}
 				if response.Alive == false{
-					log.Printf("El bot ha muerto")
+					log.Printf("El bot %s ha muerto",Player)
 					Status = "Dead"
 					break
 				}
 				Playing = false
 				time.Sleep(1*time.Second)
 				if Status == "Alive" {
-					log.Printf("Felicidades Bot, sobreviviste el nivel 2")
+					log.Printf("Felicidades Bot %s, sobreviviste el nivel 2",Player)
 				}
 			} else if ActualStage == "3" {
 				log.Printf("Etapa 3")
 				time.Sleep(5*time.Second)
 				Jugada = int32(rand.Intn(10) + 1) 
-				log.Printf("El bot ha jugado %v",Jugada)
+				log.Printf("El bot %s ha jugado %v",Player, Jugada)
 				message := pb.SendPlay{Player: Player, Plays: Jugada,  Stage: ActualStage, Round: int32(ActualRound), Score: int32(Score)}
 				response,err := serviceClient.SendPlays(context.Background(),&message)
 				if err != nil{
 					log.Fatalf("Error when calling SendMessage: %s", err)
 				}
 				if response.Alive == false{
-					log.Printf("El bot ha muerto")
+					log.Printf("El bot %s ha muerto",Player)
 					Status = "Dead"
 				}
 				Playing = false
 				time.Sleep(1*time.Second)
 				if Status == "Alive" {
-					log.Printf("Felicidades bot, sobreviviste el nivel 3, haz ganado el Juego!")
+					log.Printf("Felicidades bot %s, sobreviviste el nivel 3, haz ganado el Juego!",Player)
 				}
 			}
 		}
